@@ -232,7 +232,7 @@ export default function PlayCanvasEditor() {
           const yawRad = this.yaw * Math.PI / 180;
           
           const x = this.distance * Math.cos(pitchRad) * Math.sin(yawRad);
-          const y = this.distance * Math.sin(pitchRad);
+          const y = -this.distance * Math.sin(pitchRad);
           const z = this.distance * Math.cos(pitchRad) * Math.cos(yawRad);
           
           this.camera.setPosition(
