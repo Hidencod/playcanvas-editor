@@ -147,8 +147,8 @@ export default function PlayCanvasEditor() {
           const device = this._app.graphicsDevice;
           this._picker.resize(device.canvas.clientWidth, device.canvas.clientHeight);
           this._picker.prepare(this._camera, this._scene, this._layers);
-          console.log(this._picker);
-          const selection = await this._picker.getSelection(e.clientX - 1, e.clientY - 1, 2, 2);
+
+          const selection = await this._picker.getSelectionAsync(e.clientX - 1, e.clientY - 1, 2, 2);
 
           if (!selection[0]) {
             this.fire('deselect');
