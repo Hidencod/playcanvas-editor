@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { EditorProvider, useEditor } from './context/EditorContext';
 import EditorLayout from './components/Layout/EditorLayout';
+import { DeleteEntityCommand } from './core/history/commands/DeleteEntityCommand';
 
 function KeyboardHandler() {
   const {
@@ -8,11 +9,14 @@ function KeyboardHandler() {
     pcRef,
     selectedEntity,
     cameraControllerRef,
+    entities,
     appRef,
     coordSpace,
     setCoordSpace,
     setGizmoMode,
     removeEntity,
+    executeCommand,
+    addEntity,
     undo,  // ADD THIS
     redo   // ADD THIS
   } = useEditor();
@@ -61,7 +65,16 @@ function KeyboardHandler() {
         case 'delete':
         case 'backspace':
           if (selectedEntity) {
-            removeEntity(selectedEntity);
+            const entityObj = entities.find(e => e.name === selectedEntity);
+            
+                   if (entityObj) {
+                       const command = new DeleteEntityCommand(
+                           entityObj.entity,
+                           addEntity,
+                           removeEntity
+                       );
+                       executeCommand(command);
+                   }
           }
           break;
       }
