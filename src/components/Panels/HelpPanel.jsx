@@ -18,6 +18,10 @@ export default function HelpPanel() {
                         </button>
                     </div>
                     <div className="space-y-1">
+                        <div className="font-bold text-green-400 mt-2">File Operations</div>
+                        <div><span className="font-bold">Export</span> - Save scene as JSON</div>
+                        <div><span className="font-bold">Import</span> - Load scene from JSON</div>
+                        <div className="font-bold text-blue-400 mt-2">Editor</div>
                         <div><span className="font-bold">Ctrl+Z</span> - Undo</div>
                         <div><span className="font-bold">Ctrl+Y / Ctrl+Shift+Z</span> - Redo</div>
                         <div><span className="font-bold">1/2/3</span> - Transform modes</div>

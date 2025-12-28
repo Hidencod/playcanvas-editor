@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef } from 'react';
 import { HistoryManager } from '../core/history/HistoryManager';
-
+import { SceneSerializer } from '../core/scene/SceneSerializer';
 const EditorContext = createContext();
 
 export const EditorProvider = ({ children }) => {
@@ -18,10 +18,25 @@ export const EditorProvider = ({ children }) => {
     const selectorRef = useRef(null);
     const cameraControllerRef = useRef(null);
     const historyManagerRef = useRef(new HistoryManager());
-
+    const sceneSerializerRef = useRef(null);
     const updateHistoryState = () => {
         setCanUndo(historyManagerRef.current.canUndo());
         setCanRedo(historyManagerRef.current.canRedo());
+    };
+    const clearScene = () => {
+        // Remove all entities except camera and light
+        entities.forEach(({ entity }) => {
+            if (entity.name !== 'camera' && entity.name !== 'light') {
+                entity.destroy();
+            }
+        });
+        setEntities([]);
+        setSelectedEntity(null);
+        if (gizmoHandlerRef.current) {
+            gizmoHandlerRef.current.clear();
+        }
+        historyManagerRef.current.clear();
+        updateHistoryState();
     };
 
     const addEntity = (entity) => {
@@ -99,7 +114,9 @@ export const EditorProvider = ({ children }) => {
             undo,
             redo,
             canUndo,
-            canRedo
+            canRedo,
+            sceneSerializerRef,
+            clearScene
         }}>
             {children}
         </EditorContext.Provider>
