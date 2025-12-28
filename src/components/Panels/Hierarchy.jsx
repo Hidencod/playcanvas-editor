@@ -1,5 +1,6 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
+import { DeleteEntityCommand } from '../../core/history/commands/DeleteEntityCommand';
 import { Trash2 } from 'lucide-react';
 
 export default function Hierarchy() {
@@ -7,6 +8,8 @@ export default function Hierarchy() {
         entities,
         selectedEntity,
         setSelectedEntity,
+        executeCommand,
+        addEntity,
         removeEntity,
         selectorRef
     } = useEditor();
@@ -19,7 +22,15 @@ export default function Hierarchy() {
 
     const handleDelete = (entityName, e) => {
         e.stopPropagation();
-        removeEntity(entityName);
+        const entityObj = entities.find(e => e.name === entityName);
+        if (entityObj) {
+            const command = new DeleteEntityCommand(
+                entityObj.entity,
+                addEntity,
+                removeEntity
+            );
+            executeCommand(command);
+        }
     };
 
     return (

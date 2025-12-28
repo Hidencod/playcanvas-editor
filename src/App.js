@@ -12,12 +12,31 @@ function KeyboardHandler() {
     coordSpace,
     setCoordSpace,
     setGizmoMode,
-    removeEntity
+    removeEntity,
+    undo,  // ADD THIS
+    redo   // ADD THIS
   } = useEditor();
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!gizmoHandlerRef.current || !pcRef.current) return;
+
+      // Undo/Redo shortcuts
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+        return;
+      }
 
       gizmoHandlerRef.current.gizmo.snap = !!e.shiftKey;
       gizmoHandlerRef.current.gizmo.uniform = !e.ctrlKey;
@@ -87,7 +106,7 @@ function KeyboardHandler() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('keypress', handleKeyPress);
     };
-  }, [coordSpace, selectedEntity]);
+  }, [coordSpace, selectedEntity, undo, redo]); // ADD undo and redo to dependencies
 
   return null;
 }

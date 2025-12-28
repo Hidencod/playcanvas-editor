@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
+import { CreateEntityCommand } from '../../core/history/commands/CreateEntityCommand';
 
 const PRIMITIVES = [
     { value: 'box', label: 'Box' },
@@ -12,12 +13,18 @@ const PRIMITIVES = [
 
 export default function ObjectCreator({ entityFactory }) {
     const [isOpen, setIsOpen] = useState(false);
-    const { addEntity } = useEditor();
+    const { executeCommand, addEntity, removeEntity } = useEditor();
 
     const handleCreate = (type) => {
         if (entityFactory) {
-            const entity = entityFactory.createEntity(type);
-            addEntity(entity);
+            const command = new CreateEntityCommand(
+                entityFactory,
+                type,
+                { x: 0, y: 0, z: 0 },
+                addEntity,
+                removeEntity
+            );
+            executeCommand(command);
             setIsOpen(false);
         }
     };

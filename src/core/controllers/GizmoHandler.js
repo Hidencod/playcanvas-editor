@@ -1,8 +1,12 @@
 export class GizmoHandler {
-    constructor(pc, app, cameraComponent) {
+    constructor(pc, app, cameraComponent, onTransformStart, onTransformEnd) {
         this._type = 'translate';
         this._nodes = [];
         this._app = app;
+        this._pc = pc;
+        this.onTransformStart = onTransformStart;
+        this.onTransformEnd = onTransformEnd;
+        this.transformStartValues = new Map();
 
         let layer = app.scene.layers.getLayerByName('Immediate');
         if (!layer) {
@@ -22,6 +26,48 @@ export class GizmoHandler {
 
         for (const type in this._gizmos) {
             const gizmo = this._gizmos[type];
+
+            // Track transform start
+            gizmo.on('transform:start', () => {
+                this._nodes.forEach(node => {
+                    this.transformStartValues.set(node, {
+                        position: node.getPosition().clone(),
+                        rotation: node.getEulerAngles().clone(),
+                        scale: node.getLocalScale().clone()
+                    });
+                });
+                if (this.onTransformStart) {
+                    this.onTransformStart();
+                }
+            });
+
+            // Track transform end and create command
+            gizmo.on('transform:end', () => {
+                if (this.onTransformEnd) {
+                    this._nodes.forEach(node => {
+                        const startValues = this.transformStartValues.get(node);
+                        if (startValues) {
+                            const endValues = {
+                                position: node.getPosition().clone(),
+                                rotation: node.getEulerAngles().clone(),
+                                scale: node.getLocalScale().clone()
+                            };
+
+                            // Only create command if something actually changed
+                            const hasChanged =
+                                !startValues.position.equals(endValues.position) ||
+                                !startValues.rotation.equals(endValues.rotation) ||
+                                !startValues.scale.equals(endValues.scale);
+
+                            if (hasChanged) {
+                                this.onTransformEnd(node, this._type, startValues, endValues);
+                            }
+                        }
+                    });
+                }
+                this.transformStartValues.clear();
+            });
+
             gizmo.on('pointer:down', (x, y, meshInstance) => {
                 app.fire('gizmo:pointer', !!meshInstance);
             });

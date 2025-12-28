@@ -18,6 +18,8 @@ export default function HelpPanel() {
                         </button>
                     </div>
                     <div className="space-y-1">
+                        <div><span className="font-bold">Ctrl+Z</span> - Undo</div>
+                        <div><span className="font-bold">Ctrl+Y / Ctrl+Shift+Z</span> - Redo</div>
                         <div><span className="font-bold">1/2/3</span> - Transform modes</div>
                         <div><span className="font-bold">X</span> - Toggle World/Local</div>
                         <div><span className="font-bold">F</span> - Focus selection</div>
