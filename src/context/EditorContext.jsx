@@ -19,6 +19,7 @@ export const EditorProvider = ({ children }) => {
     const cameraControllerRef = useRef(null);
     const historyManagerRef = useRef(new HistoryManager());
     const sceneSerializerRef = useRef(null);
+    const modelLoaderRef = useRef(null);
     const updateHistoryState = () => {
         setCanUndo(historyManagerRef.current.canUndo());
         setCanRedo(historyManagerRef.current.canRedo());
@@ -116,7 +117,8 @@ export const EditorProvider = ({ children }) => {
             canUndo,
             canRedo,
             sceneSerializerRef,
-            clearScene
+            clearScene,
+            modelLoaderRef
         }}>
             {children}
         </EditorContext.Provider>

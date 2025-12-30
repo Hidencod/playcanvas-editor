@@ -1,7 +1,8 @@
 export class SceneSerializer {
-    constructor(pc, app) {
+    constructor(pc, app, modelLoader) {
         this.pc = pc;
         this.app = app;
+        this.modelLoader = modelLoader;
     }
 
     /**
@@ -23,7 +24,7 @@ export class SceneSerializer {
 
         // Serialize each entity
         entities.forEach(({ entity }) => {
-            // Skip camera and lights for now (can be added later)
+            // Skip camera and lights
             if (entity.name === 'camera' || entity.name === 'light') {
                 return;
             }
@@ -40,41 +41,65 @@ export class SceneSerializer {
     /**
      * Serialize a single entity
      */
+    /**
+ * Serialize a single entity
+ */
     serializeEntity(entity) {
         const data = {
             name: entity.name,
             enabled: entity.enabled,
             transform: {
-                position: {
-                    x: entity.getPosition().x,
-                    y: entity.getPosition().y,
-                    z: entity.getPosition().z
-                },
-                rotation: {
-                    x: entity.getEulerAngles().x,
-                    y: entity.getEulerAngles().y,
-                    z: entity.getEulerAngles().z
-                },
-                scale: {
-                    x: entity.getLocalScale().x,
-                    y: entity.getLocalScale().y,
-                    z: entity.getLocalScale().z
-                }
+                position: entity.getPosition().clone(),
+                rotation: entity.getEulerAngles().clone(),
+                scale: entity.getLocalScale().clone()
             },
             components: {}
         };
 
-        // Serialize render component
-        if (entity.render) {
+        // ✅ GLTF / Custom model root (NO render on root)
+        if (entity.modelFileName) {
+            data.isCustomModel = true;
+            data.modelFile = entity.modelFileName;
+
             data.components.render = {
-                type: entity.render.type,
-                castShadows: entity.render.castShadows,
-                receiveShadows: entity.render.receiveShadows,
-                material: this.serializeMaterial(entity.render.meshInstances[0]?.material)
+                type: 'model',
+                modelFile: entity.modelFileName,
+                castShadows: true,
+                receiveShadows: true
             };
+
+            return data; // ⛔ stop here — DO NOT access entity.render
+        }
+
+        // ✅ Primitive / single-mesh entities
+        if (entity.render) {
+            const renderType = entity.render.type;
+
+            const primitiveTypes = ['box', 'sphere', 'cylinder', 'cone', 'capsule', 'plane'];
+            const isPrimitive = primitiveTypes.includes(renderType);
+
+            if (isPrimitive) {
+                data.components.render = {
+                    type: renderType,
+                    castShadows: entity.render.castShadows,
+                    receiveShadows: entity.render.receiveShadows,
+                    material: this.serializeMaterial(
+                        entity.render.meshInstances[0]?.material
+                    )
+                };
+            }
         }
 
         return data;
+    }
+
+    hasRenderComponent(entity) {
+        if (entity.render) return true;
+
+        for (const child of entity.children) {
+            if (this.hasRenderComponent(child)) return true;
+        }
+        return false;
     }
 
     /**
@@ -104,9 +129,6 @@ export class SceneSerializer {
      * Import scene from JSON
      */
     importScene(sceneData, entityFactory, addEntity) {
-        // Clear existing entities first (optional)
-        // You might want to add a "clear scene" function
-
         // Apply scene settings
         if (sceneData.settings?.ambientLight) {
             const amb = sceneData.settings.ambientLight;
@@ -130,12 +152,23 @@ export class SceneSerializer {
      * Deserialize a single entity
      */
     deserializeEntity(data, entityFactory) {
-        // Extract primitive type from name (e.g., "box_1" -> "box")
-        const typeMatch = data.name.match(/^([a-z]+)_\d+$/);
-        const primitiveType = typeMatch ? typeMatch[1] : 'box';
+        // Check if it's a custom model
+        if (data.isCustomModel && data.modelFile) {
+            // For custom models in the React editor, we can't load them here
+            // This will be handled in Construct3
+            console.warn(`Custom model detected: ${data.modelFile} - Load this in Construct3 from project files`);
+            return null;
+        }
+
+        // Extract primitive type from render component
+        const renderData = data.components?.render;
+        if (!renderData || !renderData.type) return null;
+
+        const primitiveType = renderData.type;
 
         // Create entity using factory
         const entity = entityFactory.createEntity(primitiveType, data.transform.position);
+        entity.name = data.name;
 
         // Apply transform
         entity.setPosition(
@@ -155,8 +188,8 @@ export class SceneSerializer {
         );
 
         // Apply material if exists
-        if (data.components?.render?.material && entity.render) {
-            const matData = data.components.render.material;
+        if (renderData.material && entity.render) {
+            const matData = renderData.material;
             const material = new this.pc.StandardMaterial();
 
             material.diffuse = new this.pc.Color(

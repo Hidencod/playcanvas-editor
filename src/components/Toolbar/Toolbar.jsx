@@ -4,12 +4,14 @@ import CameraControls from './CameraControls';
 import ObjectCreator from './ObjectCreator';
 import UndoRedoControls from './UndoRedoControls';
 import SceneControls from './SceneControls';
+import ModelUploader from './ModelUploader';
 
-export default function Toolbar({ entityFactory }) {
+export default function Toolbar({ entityFactory, modelLoader }) {
     return (
         <div className="absolute top-4 left-4 flex gap-2 z-10 flex-wrap">
             <UndoRedoControls />
             <ObjectCreator entityFactory={entityFactory} />
+            <ModelUploader modelLoader={modelLoader} />
             <SceneControls />
             <GizmoControls />
             <CameraControls />

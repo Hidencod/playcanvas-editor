@@ -7,6 +7,7 @@ import { Selector } from '../../core/controllers/Selector';
 import { CameraController } from '../../core/controllers/CameraController';
 import { TransformCommand } from '../../core/history/commands/TransformCommand';
 import { SceneSerializer } from '../../core/scene/SceneSerializer';
+import { ModelLoader } from '../../core/loaders/ModelLoader';
 
 export default function PlayCanvasCanvas({ onReady }) {
     const canvasRef = useRef(null);
@@ -23,7 +24,8 @@ export default function PlayCanvasCanvas({ onReady }) {
         gizmoHandlerRef,
         selectorRef,
         cameraControllerRef,
-        sceneSerializerRef
+        sceneSerializerRef,
+        modelLoaderRef
     } = useEditor();
 
     useEffect(() => {
@@ -55,7 +57,9 @@ export default function PlayCanvasCanvas({ onReady }) {
                 appRef.current = app;
                 app.scene.ambientLight = new pc.Color(0.2, 0.2, 0.2);
 
-                
+                // Initialize ModelLoader
+                const modelLoader = new ModelLoader(pc, app);
+                modelLoaderRef.current = modelLoader;
 
                 // Initialize EntityFactory
                 const entityFactory = new EntityFactory(pc, app);
@@ -184,7 +188,7 @@ export default function PlayCanvasCanvas({ onReady }) {
                     resize();
                     selector.fire('select', box, true);
                     setIsLoading(false);
-                    if (onReady) onReady(entityFactory);
+                    if (onReady) onReady(entityFactory, modelLoader);
                 }, 100);
 
                 // Cleanup
