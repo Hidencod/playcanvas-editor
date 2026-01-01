@@ -1,13 +1,22 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { DeleteEntityCommand } from '../../core/history/commands/DeleteEntityCommand';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Box, Cylinder, Circle } from 'lucide-react';
+
+const getIconForEntity = (entity) => {
+    if (entity.modelFileName) return '📦';
+    switch (entity.render?.type) {
+        case 'box': return <Box size={16} />;
+        case 'sphere': return <Circle size={16} />;
+        case 'cylinder': return <Cylinder size={16} />;
+        default: return <Box size={16} />;
+    }
+};
 
 export default function Hierarchy() {
     const {
         entities,
         selectedEntity,
-        setSelectedEntity,
         executeCommand,
         addEntity,
         removeEntity,
@@ -34,33 +43,47 @@ export default function Hierarchy() {
     };
 
     return (
-        <div className="absolute top-4 right-4 w-64 bg-black/70 rounded-lg p-4 text-white max-h-96 overflow-y-auto">
-            <div className="font-semibold mb-3 text-lg">Scene Hierarchy</div>
-            {entities.length === 0 ? (
-                <div className="text-gray-400 text-sm">No objects in scene</div>
-            ) : (
-                <div className="space-y-1">
-                    {entities.map(({ name, entity }) => (
-                        <div
-                            key={name}
-                            onClick={() => handleSelect(name, entity)}
-                            className={`flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-colors ${selectedEntity === name
-                                    ? 'bg-blue-600'
-                                    : 'hover:bg-gray-700'
-                                }`}
-                        >
-                            <span className="font-medium">{name}</span>
-                            <button
-                                onClick={(e) => handleDelete(name, e)}
-                                className="p-1 hover:bg-red-600 rounded transition-colors"
-                                title="Delete object"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-                    ))}
+        <div className="p-4">
+            <div className="text-white">
+                <div className="text-xs text-gray-400 mb-3 uppercase tracking-wider">
+                    Scene Objects ({entities.length})
                 </div>
-            )}
+                {entities.length === 0 ? (
+                    <div className="text-gray-500 text-sm text-center py-8">
+                        No objects in scene
+                    </div>
+                ) : (
+                    <div className="space-y-1">
+                        {entities.map(({ name, entity }) => (
+                            <div
+                                key={name}
+                                onClick={() => handleSelect(name, entity)}
+                                className={`flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-colors group ${selectedEntity === name
+                                        ? 'bg-blue-600 text-white'
+                                        : 'hover:bg-gray-700 text-gray-200'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="text-gray-400 flex-shrink-0">
+                                        {getIconForEntity(entity)}
+                                    </span>
+                                    <span className="font-medium truncate">{name}</span>
+                                </div>
+                                <button
+                                    onClick={(e) => handleDelete(name, e)}
+                                    className={`p-1 rounded transition-colors flex-shrink-0 ${selectedEntity === name
+                                            ? 'hover:bg-red-600'
+                                            : 'opacity-0 group-hover:opacity-100 hover:bg-red-600'
+                                        }`}
+                                    title="Delete object"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

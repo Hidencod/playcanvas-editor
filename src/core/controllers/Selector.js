@@ -9,12 +9,14 @@ export class Selector {
         this._start = new pc.Vec2();
         this._epsilon = 1;
         this._listeners = {};
+        this._canvas = app.graphicsDevice.canvas;
 
         this._onPointerDown = this._onPointerDown.bind(this);
         this._onPointerUp = this._onPointerUp.bind(this);
 
-        window.addEventListener('pointerdown', this._onPointerDown);
-        window.addEventListener('pointerup', this._onPointerUp);
+        // Listen only on canvas instead of window
+        this._canvas.addEventListener('pointerdown', this._onPointerDown);
+        this._canvas.addEventListener('pointerup', this._onPointerUp);
     }
 
     on(event, callback) {
@@ -60,7 +62,7 @@ export class Selector {
     }
 
     destroy() {
-        window.removeEventListener('pointerdown', this._onPointerDown);
-        window.removeEventListener('pointerup', this._onPointerUp);
+        this._canvas.removeEventListener('pointerdown', this._onPointerDown);
+        this._canvas.removeEventListener('pointerup', this._onPointerUp);
     }
 }

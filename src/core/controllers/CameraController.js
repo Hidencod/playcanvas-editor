@@ -1,7 +1,8 @@
 export class CameraController {
-    constructor(pc, cameraEntity) {
+    constructor(pc, cameraEntity, canvas) {
         this.pc = pc;
         this.camera = cameraEntity;
+        this.canvas = canvas; // Store canvas reference
         this.focusPoint = new pc.Vec3(0, 0, 0);
         this.distance = 10;
         this.pitch = -30;
@@ -16,10 +17,11 @@ export class CameraController {
         this._onMouseUp = this._onMouseUp.bind(this);
         this._onWheel = this._onWheel.bind(this);
 
-        window.addEventListener('mousedown', this._onMouseDown);
-        window.addEventListener('mousemove', this._onMouseMove);
+        // Listen on canvas only
+        this.canvas.addEventListener('mousedown', this._onMouseDown);
+        window.addEventListener('mousemove', this._onMouseMove); // Keep on window for dragging
         window.addEventListener('mouseup', this._onMouseUp);
-        window.addEventListener('wheel', this._onWheel);
+        this.canvas.addEventListener('wheel', this._onWheel);
 
         this.updatePosition();
     }
@@ -94,9 +96,9 @@ export class CameraController {
     }
 
     destroy() {
-        window.removeEventListener('mousedown', this._onMouseDown);
+        this.canvas.removeEventListener('mousedown', this._onMouseDown);
         window.removeEventListener('mousemove', this._onMouseMove);
         window.removeEventListener('mouseup', this._onMouseUp);
-        window.removeEventListener('wheel', this._onWheel);
+        this.canvas.removeEventListener('wheel', this._onWheel);
     }
 }

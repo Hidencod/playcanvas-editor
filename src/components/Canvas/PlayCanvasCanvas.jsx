@@ -55,7 +55,7 @@ export default function PlayCanvasCanvas({ onReady }) {
                 app.start();
 
                 appRef.current = app;
-                app.scene.ambientLight = new pc.Color(0.2, 0.2, 0.2);
+                app.scene.ambientLight = new pc.Color(1, 1, 1);
 
                 // Initialize ModelLoader
                 const modelLoader = new ModelLoader(pc, app);
@@ -71,21 +71,23 @@ export default function PlayCanvasCanvas({ onReady }) {
                 sceneSerializerRef.current = sceneSerializer;
 
                 // Create initial objects
-                const box = entityFactory.createEntity('box', { x: 1, y: 0, z: 1 });
-                const sphere = entityFactory.createEntity('sphere', { x: -1, y: 0, z: 1 });
-                const cone = entityFactory.createEntity('cone', { x: -1, y: 0, z: -1 });
-                const capsule = entityFactory.createEntity('capsule', { x: 1, y: 0, z: -1 });
+                const plane = entityFactory.createEntity('plane', { x: 0, y: 0, z: 0 });
+                //const box = entityFactory.createEntity('box', { x: 1, y: 0, z: 1 });
+                // const sphere = entityFactory.createEntity('sphere', { x: -1, y: 0, z: 1 });
+                // const cone = entityFactory.createEntity('cone', { x: -1, y: 0, z: -1 });
+                // const capsule = entityFactory.createEntity('capsule', { x: 1, y: 0, z: -1 });
 
-                addEntity(box);
-                addEntity(sphere);
-                addEntity(cone);
-                addEntity(capsule);
+                addEntity(plane);
+                //addEntity(box);
+                // addEntity(sphere);
+                // addEntity(cone);
+                // addEntity(capsule);
 
                 // Camera
                 const camera = entityFactory.createCamera();
 
                 // Camera controls
-                const cameraController = new CameraController(pc, camera);
+                const cameraController = new CameraController(pc, camera, canvas); // Add canvas parameter
                 cameraControllerRef.current = cameraController;
                 app.on('gizmo:pointer', (hasPointer) => {
                     cameraController.enabled = !hasPointer;
@@ -123,7 +125,6 @@ export default function PlayCanvasCanvas({ onReady }) {
                 gizmoHandlerRef.current = gizmoHandler;
                 gizmoHandler.switch('translate');
 
-                // Selector
                 const worldLayer = app.scene.layers.getLayerByName('World');
                 const selector = new Selector(pc, app, camera.camera, [worldLayer]);
                 selectorRef.current = selector;
@@ -133,25 +134,30 @@ export default function PlayCanvasCanvas({ onReady }) {
                     gizmoHandler.add(node, clear);
                     setSelectedEntity(node.name);
 
+                    // Store original materials if not already stored
+                    if (!originalMaterialsRef.current.has(node)) {
+                        if (node.render) {
+                            const meshInstances = node.render.meshInstances;
+                            const materials = meshInstances.map(mi => mi.material);
+                            originalMaterialsRef.current.set(node, materials);
+                        }
+                    }
+
                     // Add highlight to selected object
                     if (node.render) {
                         const meshInstances = node.render.meshInstances;
-                        meshInstances.forEach((meshInstance, index) => {
-                            // Store original material if not already stored
-                            if (!originalMaterialsRef.current.has(node)) {
-                                originalMaterialsRef.current.set(node, []);
-                            }
-                            const materialsArray = originalMaterialsRef.current.get(node);
-                            if (!materialsArray[index]) {
-                                materialsArray[index] = meshInstance.material;
-                            }
+                        meshInstances.forEach((meshInstance) => {
+                            // Get the original material
+                            const originalMaterial = originalMaterialsRef.current.get(node)?.[meshInstances.indexOf(meshInstance)];
 
-                            // Create highlighted material
-                            const highlightMaterial = meshInstance.material.clone();
-                            highlightMaterial.emissive = new pc.Color(0.3, 0.5, 1); // Blue glow
-                            highlightMaterial.emissiveIntensity = 0.3;
-                            highlightMaterial.update();
-                            meshInstance.material = highlightMaterial;
+                            if (originalMaterial) {
+                                // Clone the original material for highlighting
+                                const highlightMaterial = originalMaterial.clone();
+                                highlightMaterial.emissive = new pc.Color(0.3, 0.5, 1); // Blue glow
+                                highlightMaterial.emissiveIntensity = 0.3;
+                                highlightMaterial.update();
+                                meshInstance.material = highlightMaterial;
+                            }
                         });
                     }
                 });
@@ -159,7 +165,7 @@ export default function PlayCanvasCanvas({ onReady }) {
                 selector.on('deselect', () => {
                     gizmoHandler.clear();
 
-                    // Restore original materials
+                    // Restore original materials for all entities
                     originalMaterialsRef.current.forEach((materials, node) => {
                         if (node.render) {
                             const meshInstances = node.render.meshInstances;
@@ -170,7 +176,6 @@ export default function PlayCanvasCanvas({ onReady }) {
                             });
                         }
                     });
-                    originalMaterialsRef.current.clear();
 
                     setSelectedEntity(null);
                 });
@@ -180,13 +185,13 @@ export default function PlayCanvasCanvas({ onReady }) {
                     app.resizeCanvas();
                     const bounds = canvas.getBoundingClientRect();
                     const dim = camera.camera.horizontalFov ? bounds.width : bounds.height;
-                    gizmoHandler.size = 1024 / dim;
+                    gizmoHandler.size = 800 / dim;
                 };
                 window.addEventListener('resize', resize);
 
                 setTimeout(() => {
                     resize();
-                    selector.fire('select', box, true);
+                    selector.fire('select', plane, true);
                     setIsLoading(false);
                     if (onReady) onReady(entityFactory, modelLoader);
                 }, 100);

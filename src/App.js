@@ -22,6 +22,7 @@ function KeyboardHandler() {
   } = useEditor();
 
   useEffect(() => {
+
     const handleKeyDown = (e) => {
       if (!gizmoHandlerRef.current || !pcRef.current) return;
 
@@ -63,7 +64,7 @@ function KeyboardHandler() {
           }
           break;
         case 'delete':
-        case 'backspace':
+          
           if (selectedEntity) {
             const entityObj = entities.find(e => e.name === selectedEntity);
             
