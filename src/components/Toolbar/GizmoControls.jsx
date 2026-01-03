@@ -1,3 +1,5 @@
+//GizmoControls.jsx
+
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 

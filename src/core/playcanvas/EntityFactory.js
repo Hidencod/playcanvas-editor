@@ -1,3 +1,5 @@
+// core/playcanvas/EntityFactory.js
+
 import { createColorMaterial } from '../../utils/materialFactory';
 
 export class EntityFactory {
@@ -14,12 +16,17 @@ export class EntityFactory {
         };
     }
 
-    createEntity(type, position = { x: 0, y: 0, z: 0 }) {
+    createEntity(type, position = { x: 0, y: 0, z: 0 }, options = {}) {
         const pc = this.pc;
         this.entityCounter[type]++;
         const name = `${type}_${this.entityCounter[type]}`;
 
         const entity = new pc.Entity(name);
+
+        // Set objectId if provided in options
+        if (options.objectId) {
+            entity.objectId = options.objectId;
+        }
 
         // Default colors for different shapes
         const colorMap = {

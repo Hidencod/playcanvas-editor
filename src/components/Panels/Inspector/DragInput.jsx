@@ -6,6 +6,8 @@ export default function DragInput({
     onFocus,
     onBlur,
     onKeyDown,
+    onDragStart,
+    onDragEnd,
     step = 0.1,
     className = '',
     label = '',
@@ -21,7 +23,7 @@ export default function DragInput({
             if (!isDragging) return;
 
             const deltaX = e.clientX - startX;
-            const dragSensitivity = step; // pixels per step
+            const dragSensitivity = step;
             const delta = Math.round(deltaX / 5) * dragSensitivity;
             const newValue = (startValue + delta).toFixed(3);
 
@@ -32,6 +34,12 @@ export default function DragInput({
             if (isDragging) {
                 setIsDragging(false);
                 document.body.style.cursor = '';
+
+                // Notify parent that drag ended
+                const finalValue = parseFloat(value);
+                if (onDragEnd && !isNaN(finalValue) && finalValue !== startValue) {
+                    onDragEnd(startValue, finalValue);
+                }
             }
         };
 
@@ -45,13 +53,19 @@ export default function DragInput({
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, startX, startValue, onChange, step]);
+    }, [isDragging, startX, startValue, onChange, step, value, onDragEnd]);
 
     const handleLabelMouseDown = (e) => {
         e.preventDefault();
+        const currentValue = parseFloat(value) || 0;
         setIsDragging(true);
         setStartX(e.clientX);
-        setStartValue(parseFloat(value) || 0);
+        setStartValue(currentValue);
+
+        // Notify parent that drag started
+        if (onDragStart) {
+            onDragStart(currentValue);
+        }
     };
 
     const colorMap = {
@@ -73,6 +87,7 @@ export default function DragInput({
             <label
                 className={`text-xs block mb-1 cursor-ew-resize select-none ${colorMap[color]}`}
                 onMouseDown={handleLabelMouseDown}
+                title="Drag to change value"
             >
                 {label}
             </label>

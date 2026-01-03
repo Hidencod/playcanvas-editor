@@ -1,3 +1,5 @@
+// PlayCanvasCanvas.jsx - Fixed version
+
 import React, { useEffect, useRef } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { loadPlayCanvas } from '../../core/playcanvas/PlayCanvasLoader';
@@ -13,6 +15,7 @@ export default function PlayCanvasCanvas({ onReady }) {
     const canvasRef = useRef(null);
     const entityFactoryRef = useRef(null);
     const originalMaterialsRef = useRef(new Map());
+    const highlightedEntitiesRef = useRef(new Set());
 
     const {
         setSelectedEntity,
@@ -67,27 +70,19 @@ export default function PlayCanvasCanvas({ onReady }) {
 
                 // Initialize SceneSerializer
                 const sceneSerializer = new SceneSerializer(pc, app);
-                sceneSerializer.entityFactory = entityFactory; // Store reference
+                sceneSerializer.entityFactory = entityFactory;
                 sceneSerializerRef.current = sceneSerializer;
 
                 // Create initial objects
                 const plane = entityFactory.createEntity('plane', { x: 0, y: 0, z: 0 });
-                //const box = entityFactory.createEntity('box', { x: 1, y: 0, z: 1 });
-                // const sphere = entityFactory.createEntity('sphere', { x: -1, y: 0, z: 1 });
-                // const cone = entityFactory.createEntity('cone', { x: -1, y: 0, z: -1 });
-                // const capsule = entityFactory.createEntity('capsule', { x: 1, y: 0, z: -1 });
 
                 addEntity(plane);
-                //addEntity(box);
-                // addEntity(sphere);
-                // addEntity(cone);
-                // addEntity(capsule);
 
                 // Camera
                 const camera = entityFactory.createCamera();
 
                 // Camera controls
-                const cameraController = new CameraController(pc, camera, canvas); // Add canvas parameter
+                const cameraController = new CameraController(pc, camera, canvas);
                 cameraControllerRef.current = cameraController;
                 app.on('gizmo:pointer', (hasPointer) => {
                     cameraController.enabled = !hasPointer;
@@ -98,20 +93,16 @@ export default function PlayCanvasCanvas({ onReady }) {
 
                 // Gizmo handler with transform callbacks
                 const handleTransformStart = () => {
-                    // Optional: Add visual feedback when transform starts
                     console.log('Transform started');
                 };
 
                 const handleTransformEnd = (entity, transformType, oldValues, newValues) => {
-                    // Create transform command
                     const command = new TransformCommand(
                         entity,
                         transformType,
                         oldValues,
                         newValues
                     );
-
-                    // Add to history (skipExecute = true because gizmo already applied the transform)
                     executeCommand(command, true);
                 };
 
@@ -134,49 +125,55 @@ export default function PlayCanvasCanvas({ onReady }) {
                     gizmoHandler.add(node, clear);
                     setSelectedEntity(node.name);
 
-                    // Store original materials if not already stored
-                    if (!originalMaterialsRef.current.has(node)) {
-                        if (node.render) {
-                            const meshInstances = node.render.meshInstances;
-                            const materials = meshInstances.map(mi => mi.material);
-                            originalMaterialsRef.current.set(node, materials);
-                        }
-                    }
-
-                    // Add highlight to selected object
                     if (node.render) {
                         const meshInstances = node.render.meshInstances;
-                        meshInstances.forEach((meshInstance) => {
-                            // Get the original material
-                            const originalMaterial = originalMaterialsRef.current.get(node)?.[meshInstances.indexOf(meshInstance)];
 
-                            if (originalMaterial) {
-                                // Clone the original material for highlighting
-                                const highlightMaterial = originalMaterial.clone();
-                                highlightMaterial.emissive = new pc.Color(0.3, 0.5, 1); // Blue glow
-                                highlightMaterial.emissiveIntensity = 0.3;
-                                highlightMaterial.update();
-                                meshInstance.material = highlightMaterial;
-                            }
+                        // Store original materials only if not already stored
+                        if (!originalMaterialsRef.current.has(node)) {
+                            const materials = meshInstances.map(mi => ({
+                                material: mi.material,
+                                diffuse: mi.material.diffuse.clone(),
+                                emissive: mi.material.emissive ? mi.material.emissive.clone() : new pc.Color(0, 0, 0),
+                                emissiveIntensity: mi.material.emissiveIntensity || 0
+                            }));
+                            originalMaterialsRef.current.set(node, materials);
+                        }
+
+                        // Apply highlight by modifying emissive properties
+                        meshInstances.forEach((meshInstance) => {
+                            meshInstance.material.emissive = new pc.Color(0.3, 0.5, 1);
+                            meshInstance.material.emissiveIntensity = 0.3;
+                            meshInstance.material.update();
                         });
+
+                        highlightedEntitiesRef.current.add(node);
                     }
                 });
 
                 selector.on('deselect', () => {
                     gizmoHandler.clear();
 
-                    // Restore original materials for all entities
-                    originalMaterialsRef.current.forEach((materials, node) => {
+                    // Restore original emissive properties for highlighted entities
+                    highlightedEntitiesRef.current.forEach((node) => {
                         if (node.render) {
                             const meshInstances = node.render.meshInstances;
-                            meshInstances.forEach((meshInstance, index) => {
-                                if (materials[index]) {
-                                    meshInstance.material = materials[index];
-                                }
-                            });
+                            const originalData = originalMaterialsRef.current.get(node);
+
+                            if (originalData) {
+                                meshInstances.forEach((meshInstance, index) => {
+                                    if (originalData[index]) {
+                                        // Restore emissive properties only
+                                        meshInstance.material.emissive = originalData[index].emissive.clone();
+                                        meshInstance.material.emissiveIntensity = originalData[index].emissiveIntensity;
+                                        meshInstance.material.update();
+                                    }
+                                });
+                            }
                         }
                     });
 
+                    // Clear highlighted entities set
+                    highlightedEntitiesRef.current.clear();
                     setSelectedEntity(null);
                 });
 
@@ -203,6 +200,7 @@ export default function PlayCanvasCanvas({ onReady }) {
                     gizmoHandler.destroy();
                     selector.destroy();
                     originalMaterialsRef.current.clear();
+                    highlightedEntitiesRef.current.clear();
                     app.destroy();
                 };
             }).catch(error => {
@@ -217,7 +215,7 @@ export default function PlayCanvasCanvas({ onReady }) {
         return () => {
             if (cleanup) cleanup();
         };
-    }, []);
+    },[]);
 
     return <canvas ref={canvasRef} className="w-full h-full" />;
 }

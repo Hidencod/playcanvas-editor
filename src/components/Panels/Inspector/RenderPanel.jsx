@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, Palette } from 'lucide-react';
 import { useEditor } from '../../../context/EditorContext';
 
@@ -8,7 +8,6 @@ export default function RenderPanel({ entity }) {
     const [receiveShadows, setReceiveShadows] = useState(true);
     const [color, setColor] = useState('#ccffff');
     const { pcRef } = useEditor();
-    const originalMaterialsRef = useRef(new Map());
 
     useEffect(() => {
         if (!entity || !entity.render) return;
@@ -16,24 +15,10 @@ export default function RenderPanel({ entity }) {
         setCastShadows(entity.render.castShadows);
         setReceiveShadows(entity.render.receiveShadows);
 
-        // Get the ORIGINAL material, not the highlighted one
-        // We need to look for the material without emissive glow
+        // Get the current diffuse color (this is the actual color, not affected by highlight)
         const meshInstance = entity.render.meshInstances[0];
         if (meshInstance && meshInstance.material) {
-            const material = meshInstance.material;
-
-            // Check if this is a highlighted material (has blue emissive)
-            const isHighlighted = material.emissive &&
-                material.emissive.r === 0.3 &&
-                material.emissive.g === 0.5 &&
-                material.emissive.b === 1;
-
-            if (isHighlighted) {
-                // Store reference to find original later
-                // For now, use the diffuse color which should be preserved
-            }
-
-            const c = material.diffuse;
+            const c = meshInstance.material.diffuse;
             const hex = rgbToHex(c.r, c.g, c.b);
             setColor(hex);
         }
@@ -61,24 +46,11 @@ export default function RenderPanel({ entity }) {
         const rgb = hexToRgb(newColor);
         const pc = pcRef.current;
 
-        // Update ALL mesh instances (including highlighted ones)
+        // Update diffuse color on ALL mesh instances
+        // The emissive (highlight) is separate and won't be affected
         entity.render.meshInstances.forEach(mi => {
             if (mi.material) {
-                // Store if it was highlighted
-                const wasHighlighted = mi.material.emissive &&
-                    mi.material.emissive.r === 0.3 &&
-                    mi.material.emissive.g === 0.5 &&
-                    mi.material.emissive.b === 1;
-
-                // Update diffuse color
                 mi.material.diffuse = new pc.Color(rgb.r, rgb.g, rgb.b);
-
-                // Preserve highlight if it was there
-                if (wasHighlighted) {
-                    mi.material.emissive = new pc.Color(0.3, 0.5, 1);
-                    mi.material.emissiveIntensity = 0.3;
-                }
-
                 mi.material.update();
             }
         });

@@ -14,7 +14,7 @@ export class Selector {
         this._onPointerDown = this._onPointerDown.bind(this);
         this._onPointerUp = this._onPointerUp.bind(this);
 
-        // Listen only on canvas instead of window
+        // Listen only on canvas
         this._canvas.addEventListener('pointerdown', this._onPointerDown);
         this._canvas.addEventListener('pointerup', this._onPointerUp);
     }
@@ -58,7 +58,21 @@ export class Selector {
             return;
         }
 
-        this.fire('select', selection[0].node, !e.ctrlKey && !e.metaKey);
+        // Get the top-level selectable entity (not internal mesh parts)
+        let selectedNode = selection[0].node;
+
+        // Walk up the hierarchy to find a meaningful entity
+        // Skip internal mesh parts and go to the parent model
+        while (selectedNode && selectedNode.parent && selectedNode.parent.name !== 'Root') {
+            // If this entity has a modelFileName, it's the main model entity
+            if (selectedNode.modelFileName ||
+                (selectedNode.render && selectedNode.render.type !== 'asset')) {
+                break;
+            }
+            selectedNode = selectedNode.parent;
+        }
+
+        this.fire('select', selectedNode, !e.ctrlKey && !e.metaKey);
     }
 
     destroy() {

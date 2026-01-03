@@ -1,3 +1,4 @@
+//ObjectCreator.jsx
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { CreateEntityCommand } from '../../core/history/commands/CreateEntityCommand';

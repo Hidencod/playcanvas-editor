@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Move } from 'lucide-react';
 import { useEditor } from '../../../context/EditorContext';
+import { TransformCommand } from '../../../core/history/commands/TransformCommand';
 import DragInput from './DragInput';
 
 export default function TransformPanel({ entity }) {
@@ -13,7 +14,14 @@ export default function TransformPanel({ entity }) {
     const [scaleStr, setScaleStr] = useState({ x: '1', y: '1', z: '1' });
 
     const [isExpanded, setIsExpanded] = useState(true);
-    const { gizmoHandlerRef } = useEditor();
+    const { gizmoHandlerRef, executeCommand, pcRef } = useEditor();
+
+    // Track drag start values for undo
+    const dragStartValues = useRef({
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 }
+    });
 
     useEffect(() => {
         if (!entity) return;
@@ -65,6 +73,29 @@ export default function TransformPanel({ entity }) {
         }
     };
 
+    // Create undo command for transform change
+    const createTransformCommand = (transformType, oldValues, newValues) => {
+        if (!entity || !pcRef.current) return;
+
+        const pc = pcRef.current;
+        const command = new TransformCommand(
+            entity,
+            transformType,
+            {
+                position: new pc.Vec3(oldValues.position.x, oldValues.position.y, oldValues.position.z),
+                rotation: new pc.Vec3(oldValues.rotation.x, oldValues.rotation.y, oldValues.rotation.z),
+                scale: new pc.Vec3(oldValues.scale.x, oldValues.scale.y, oldValues.scale.z)
+            },
+            {
+                position: new pc.Vec3(newValues.position.x, newValues.position.y, newValues.position.z),
+                rotation: new pc.Vec3(newValues.rotation.x, newValues.rotation.y, newValues.rotation.z),
+                scale: new pc.Vec3(newValues.scale.x, newValues.scale.y, newValues.scale.z)
+            }
+        );
+
+        executeCommand(command, true); // Skip execute since change already applied
+    };
+
     const handlePositionChange = (axis, value) => {
         setPositionStr({ ...positionStr, [axis]: value });
 
@@ -99,6 +130,28 @@ export default function TransformPanel({ entity }) {
             entity.setLocalScale(newScale.x, newScale.y, newScale.z);
             updateGizmo();
         }
+    };
+
+    // Drag handlers for undo
+    const handleDragStart = (type) => {
+        dragStartValues.current = {
+            position: { ...position },
+            rotation: { ...rotation },
+            scale: { ...scale }
+        };
+    };
+
+    const handleDragEnd = (type) => {
+        // Create undo command with start and end values
+        createTransformCommand(
+            type === 'position' ? 'translate' : type === 'rotation' ? 'rotate' : 'scale',
+            dragStartValues.current,
+            {
+                position: { ...position },
+                rotation: { ...rotation },
+                scale: { ...scale }
+            }
+        );
     };
 
     const handleFocus = (e) => {
@@ -175,6 +228,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('position', 'x')}
                                 onKeyDown={(e) => handleKeyDown(e, 'position', 'x')}
+                                onDragStart={() => handleDragStart('position')}
+                                onDragEnd={() => handleDragEnd('position')}
                                 step={0.1}
                             />
                             <DragInput
@@ -185,6 +240,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('position', 'y')}
                                 onKeyDown={(e) => handleKeyDown(e, 'position', 'y')}
+                                onDragStart={() => handleDragStart('position')}
+                                onDragEnd={() => handleDragEnd('position')}
                                 step={0.1}
                             />
                             <DragInput
@@ -195,6 +252,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('position', 'z')}
                                 onKeyDown={(e) => handleKeyDown(e, 'position', 'z')}
+                                onDragStart={() => handleDragStart('position')}
+                                onDragEnd={() => handleDragEnd('position')}
                                 step={0.1}
                             />
                         </div>
@@ -212,6 +271,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('rotation', 'x')}
                                 onKeyDown={(e) => handleKeyDown(e, 'rotation', 'x')}
+                                onDragStart={() => handleDragStart('rotation')}
+                                onDragEnd={() => handleDragEnd('rotation')}
                                 step={1}
                             />
                             <DragInput
@@ -222,6 +283,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('rotation', 'y')}
                                 onKeyDown={(e) => handleKeyDown(e, 'rotation', 'y')}
+                                onDragStart={() => handleDragStart('rotation')}
+                                onDragEnd={() => handleDragEnd('rotation')}
                                 step={1}
                             />
                             <DragInput
@@ -232,6 +295,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('rotation', 'z')}
                                 onKeyDown={(e) => handleKeyDown(e, 'rotation', 'z')}
+                                onDragStart={() => handleDragStart('rotation')}
+                                onDragEnd={() => handleDragEnd('rotation')}
                                 step={1}
                             />
                         </div>
@@ -249,6 +314,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('scale', 'x')}
                                 onKeyDown={(e) => handleKeyDown(e, 'scale', 'x')}
+                                onDragStart={() => handleDragStart('scale')}
+                                onDragEnd={() => handleDragEnd('scale')}
                                 step={0.1}
                             />
                             <DragInput
@@ -259,6 +326,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('scale', 'y')}
                                 onKeyDown={(e) => handleKeyDown(e, 'scale', 'y')}
+                                onDragStart={() => handleDragStart('scale')}
+                                onDragEnd={() => handleDragEnd('scale')}
                                 step={0.1}
                             />
                             <DragInput
@@ -269,6 +338,8 @@ export default function TransformPanel({ entity }) {
                                 onFocus={handleFocus}
                                 onBlur={() => handleBlur('scale', 'z')}
                                 onKeyDown={(e) => handleKeyDown(e, 'scale', 'z')}
+                                onDragStart={() => handleDragStart('scale')}
+                                onDragEnd={() => handleDragEnd('scale')}
                                 step={0.1}
                             />
                         </div>
