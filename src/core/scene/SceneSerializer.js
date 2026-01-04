@@ -1,8 +1,9 @@
 export class SceneSerializer {
-    constructor(pc, app, modelLoader) {
+    constructor(pc, app, modelLoader, assetManager = null) {
         this.pc = pc;
         this.app = app;
         this.modelLoader = modelLoader;
+        this.assetManager = assetManager;
     }
 
     /**
@@ -41,9 +42,6 @@ export class SceneSerializer {
     /**
      * Serialize a single entity
      */
-    /**
- * Serialize a single entity
- */
     serializeEntity(entity) {
         const data = {
             name: entity.name,
@@ -56,22 +54,33 @@ export class SceneSerializer {
             components: {}
         };
 
-        // ✅ GLTF / Custom model root (NO render on root)
+        // Add objectId if exists
+        if (entity.objectId) {
+            data.objectId = entity.objectId;
+        }
+
+        // Custom model (GLTF/GLB)
         if (entity.modelFileName) {
             data.isCustomModel = true;
             data.modelFile = entity.modelFileName;
 
+            // Store assetId if available (for IndexedDB lookup)
+            if (entity.assetId) {
+                data.assetId = entity.assetId;
+            }
+
             data.components.render = {
                 type: 'model',
                 modelFile: entity.modelFileName,
+                assetId: entity.assetId || null,
                 castShadows: true,
                 receiveShadows: true
             };
 
-            return data; // ⛔ stop here — DO NOT access entity.render
+            return data;
         }
 
-        // ✅ Primitive / single-mesh entities
+        // Primitive entities
         if (entity.render) {
             const renderType = entity.render.type;
 
@@ -91,15 +100,6 @@ export class SceneSerializer {
         }
 
         return data;
-    }
-
-    hasRenderComponent(entity) {
-        if (entity.render) return true;
-
-        for (const child of entity.children) {
-            if (this.hasRenderComponent(child)) return true;
-        }
-        return false;
     }
 
     /**
@@ -128,7 +128,7 @@ export class SceneSerializer {
     /**
      * Import scene from JSON
      */
-    importScene(sceneData, entityFactory, addEntity) {
+    async importScene(sceneData, entityFactory, addEntity) {
         // Apply scene settings
         if (sceneData.settings?.ambientLight) {
             const amb = sceneData.settings.ambientLight;
@@ -137,13 +137,18 @@ export class SceneSerializer {
 
         // Create entities
         const createdEntities = [];
-        sceneData.entities.forEach(entityData => {
-            const entity = this.deserializeEntity(entityData, entityFactory);
-            if (entity) {
-                addEntity(entity);
-                createdEntities.push(entity);
+
+        for (const entityData of sceneData.entities) {
+            try {
+                const entity = await this.deserializeEntity(entityData, entityFactory);
+                if (entity) {
+                    addEntity(entity);
+                    createdEntities.push(entity);
+                }
+            } catch (error) {
+                console.error(`Failed to load entity ${entityData.name}:`, error);
             }
-        });
+        }
 
         return createdEntities;
     }
@@ -151,12 +156,56 @@ export class SceneSerializer {
     /**
      * Deserialize a single entity
      */
-    deserializeEntity(data, entityFactory) {
+    async deserializeEntity(data, entityFactory) {
         // Check if it's a custom model
-        if (data.isCustomModel && data.modelFile) {
-            // For custom models in the React editor, we can't load them here
-            // This will be handled in Construct3
-            console.warn(`Custom model detected: ${data.modelFile} - Load this in Construct3 from project files`);
+        if (data.isCustomModel && data.assetId && this.assetManager) {
+            try {
+                console.log(`📦 Loading custom model from AssetManager: ${data.assetId}`);
+
+                // Get the file from AssetManager
+                const file = await this.assetManager.getAssetAsFile(data.assetId);
+
+                // Load the model
+                const entity = await this.modelLoader.loadModelFromFile(file, data.name);
+
+                // Restore assetId
+                entity.assetId = data.assetId;
+
+                // Restore objectId if exists
+                if (data.objectId) {
+                    entity.objectId = data.objectId;
+                }
+
+                // Apply transform
+                entity.setPosition(
+                    data.transform.position.x,
+                    data.transform.position.y,
+                    data.transform.position.z
+                );
+                entity.setEulerAngles(
+                    data.transform.rotation.x,
+                    data.transform.rotation.y,
+                    data.transform.rotation.z
+                );
+                entity.setLocalScale(
+                    data.transform.scale.x,
+                    data.transform.scale.y,
+                    data.transform.scale.z
+                );
+
+                console.log(`✅ Custom model loaded: ${data.name}`);
+                return entity;
+
+            } catch (error) {
+                console.error(`❌ Failed to load custom model from AssetManager: ${data.assetId}`, error);
+                console.warn(`Custom model ${data.modelFile} not found in AssetManager - skipping`);
+                return null;
+            }
+        }
+
+        // Check if it's a custom model without assetId (old format)
+        if (data.isCustomModel && data.modelFile && !data.assetId) {
+            console.warn(`⚠️ Custom model ${data.modelFile} has no assetId - please re-import the model through Asset Browser`);
             return null;
         }
 
@@ -169,6 +218,11 @@ export class SceneSerializer {
         // Create entity using factory
         const entity = entityFactory.createEntity(primitiveType, data.transform.position);
         entity.name = data.name;
+
+        // Restore objectId if exists
+        if (data.objectId) {
+            entity.objectId = data.objectId;
+        }
 
         // Apply transform
         entity.setPosition(
@@ -237,14 +291,14 @@ export class SceneSerializer {
     /**
      * Import from file
      */
-    importFromFile(file, entityFactory, addEntity) {
+    async importFromFile(file, entityFactory, addEntity) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
 
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const sceneData = JSON.parse(e.target.result);
-                    const entities = this.importScene(sceneData, entityFactory, addEntity);
+                    const entities = await this.importScene(sceneData, entityFactory, addEntity);
                     resolve(entities);
                 } catch (error) {
                     reject(error);

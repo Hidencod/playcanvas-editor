@@ -11,7 +11,7 @@ export default function Toolbar({ entityFactory, modelLoader }) {
         <div className="absolute top-4 left-4 flex gap-2 z-10 flex-wrap">
             <UndoRedoControls />
             <ObjectCreator entityFactory={entityFactory} />
-            <ModelUploader modelLoader={modelLoader} />
+            {/* <ModelUploader modelLoader={modelLoader} /> */}
             <SceneControls />
             <GizmoControls />
             <CameraControls />

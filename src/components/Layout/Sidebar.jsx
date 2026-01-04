@@ -83,7 +83,7 @@ export default function Sidebar() {
 
             {/* Sidebar Content */}
             {!isCollapsed && (
-                <div className="flex flex-col w-full h-full">
+                <div className="flex flex-col w-full h-full overflow-hidden">
                     {/* Tabs */}
                     <div className="flex border-b border-gray-700 flex-shrink-0">
                         <button
@@ -107,7 +107,7 @@ export default function Sidebar() {
                     </div>
 
                     {/* Tab Content */}
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden min-h-0">
                         {activeTab === 'hierarchy' ? (
                             <Hierarchy />
                         ) : (

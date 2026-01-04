@@ -7,7 +7,8 @@ export default function SceneControls() {
         entities,
         sceneSerializerRef,
         addEntity,
-        clearScene
+        clearScene,
+        assetManagerRef
     } = useEditor();
 
     const [isExportOpen, setIsExportOpen] = useState(false);
@@ -30,6 +31,11 @@ export default function SceneControls() {
         if (!file || !sceneSerializerRef.current) return;
 
         try {
+            // Make sure assetManager is passed to serializer
+            if (assetManagerRef?.current && !sceneSerializerRef.current.assetManager) {
+                sceneSerializerRef.current.assetManager = assetManagerRef.current;
+            }
+
             const entityFactory = sceneSerializerRef.current.entityFactory;
 
             // Ask user if they want to clear the scene first

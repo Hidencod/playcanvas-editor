@@ -4,6 +4,8 @@ import PlayCanvasCanvas from '../Canvas/PlayCanvasCanvas';
 import Toolbar from '../Toolbar/Toolbar';
 import Sidebar from './Sidebar';
 import HelpPanel from '../Panels/HelpPanel';
+import BottomPanel from '../Panels/BottomPanel';
+import AutoSaveManager from '../AutoSave/AutoSaveManager';
 
 export default function EditorLayout() {
     const { isLoading } = useEditor();
@@ -28,11 +30,37 @@ export default function EditorLayout() {
                 )}
 
                 <Toolbar entityFactory={entityFactory} modelLoader={modelLoader} />
+                
                 <HelpPanel />
+
+                
+
+                {/* Bottom Panel */}
+                <BottomPanel />
+                {/* Auto-Save Manager */}
+                <AutoSaveManager />
             </div>
 
             {/* Sidebar */}
             <Sidebar />
+
+            {/* Global styles for animations */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes fade-in {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                .animate-fade-in {
+                    animation: fade-in 0.3s ease-out;
+                }
+            `}} />
         </div>
     );
 }

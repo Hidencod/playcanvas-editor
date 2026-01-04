@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useRef } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { HistoryManager } from '../core/history/HistoryManager';
 import { SceneSerializer } from '../core/scene/SceneSerializer';
+import { AssetManager } from '../core/assets/AssetManager';
+
 const EditorContext = createContext();
 
 export const EditorProvider = ({ children }) => {
@@ -20,10 +22,26 @@ export const EditorProvider = ({ children }) => {
     const historyManagerRef = useRef(new HistoryManager());
     const sceneSerializerRef = useRef(null);
     const modelLoaderRef = useRef(null);
+    const assetManagerRef = useRef(null);
+
     const updateHistoryState = () => {
         setCanUndo(historyManagerRef.current.canUndo());
         setCanRedo(historyManagerRef.current.canRedo());
     };
+
+    useEffect(() => {
+        const initAssetManager = async () => {
+            const assetManager = new AssetManager();
+            await assetManager.initialize();
+            assetManagerRef.current = assetManager;
+            console.log('✅ AssetManager initialized');
+        };
+
+        initAssetManager().catch(error => {
+            console.error('Failed to initialize AssetManager:', error);
+        });
+    }, []);
+
     const clearScene = () => {
         // Remove all entities except camera and light
         entities.forEach(({ entity }) => {
@@ -92,6 +110,7 @@ export const EditorProvider = ({ children }) => {
             gizmoHandlerRef.current.gizmo.attach(nodes);
         }
     };
+
     return (
         <EditorContext.Provider value={{
             selectedEntity,
@@ -110,7 +129,7 @@ export const EditorProvider = ({ children }) => {
             gizmoHandlerRef,
             selectorRef,
             cameraControllerRef,
-            historyManagerRef,
+            history: historyManagerRef.current,
             executeCommand,
             undo,
             redo,
@@ -118,7 +137,8 @@ export const EditorProvider = ({ children }) => {
             canRedo,
             sceneSerializerRef,
             clearScene,
-            modelLoaderRef
+            modelLoaderRef,
+            assetManagerRef
         }}>
             {children}
         </EditorContext.Provider>

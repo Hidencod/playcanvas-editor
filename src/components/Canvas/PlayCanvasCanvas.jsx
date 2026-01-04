@@ -28,7 +28,8 @@ export default function PlayCanvasCanvas({ onReady }) {
         selectorRef,
         cameraControllerRef,
         sceneSerializerRef,
-        modelLoaderRef
+        modelLoaderRef,
+        assetManagerRef
     } = useEditor();
 
     useEffect(() => {
@@ -68,9 +69,9 @@ export default function PlayCanvasCanvas({ onReady }) {
                 const entityFactory = new EntityFactory(pc, app);
                 entityFactoryRef.current = entityFactory;
 
-                // Initialize SceneSerializer
-                const sceneSerializer = new SceneSerializer(pc, app);
-                sceneSerializer.entityFactory = entityFactory;
+                // Initialize SceneSerializer with modelLoader
+                const sceneSerializer = new SceneSerializer(pc, app, modelLoader);
+                sceneSerializer.entityFactory = entityFactory; // Store reference
                 sceneSerializerRef.current = sceneSerializer;
 
                 // Create initial objects
@@ -188,7 +189,6 @@ export default function PlayCanvasCanvas({ onReady }) {
 
                 setTimeout(() => {
                     resize();
-                    selector.fire('select', plane, true);
                     setIsLoading(false);
                     if (onReady) onReady(entityFactory, modelLoader);
                 }, 100);
@@ -215,7 +215,7 @@ export default function PlayCanvasCanvas({ onReady }) {
         return () => {
             if (cleanup) cleanup();
         };
-    },[]);
+    }, []);
 
     return <canvas ref={canvasRef} className="w-full h-full" />;
 }

@@ -69,7 +69,7 @@ export class ModelLoader {
                             entity.modelFileName = file.name; // ADD THIS LINE
 
                             // Center and scale the model
-                            this.centerAndScaleModel(entity);
+                            //this.centerAndScaleModel(entity);
 
                             // Add to scene
                             this.app.root.addChild(entity);
